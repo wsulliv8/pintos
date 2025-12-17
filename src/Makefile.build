@@ -103,7 +103,7 @@ threads/loader.o: threads/loader.S
 
 loader.bin: threads/loader.o
 	$(LD) $(LDOPTIONS) -N -e 0 -Ttext 0x7c00 -o loader.out $<
-	$(OBJDUMP) -S loader.out > loader.asm
+	$(OBJDUMP) -m i8086 -S loader.out > loader.asm
 	$(OBJCOPY) -S -O binary -j .text loader.out $@
 	rm loader.out
 
