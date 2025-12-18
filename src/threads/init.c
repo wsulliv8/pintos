@@ -133,7 +133,35 @@ pintos_init (void)
     /* Run actions specified on kernel command line. */
     run_actions (argv);
   } else {
-    // TODO: no command line passed to kernel. Run interactively 
+
+    /* PROJECT 0: Interactive mode */
+    while (1) {
+      printf("PKUOS>");
+      char line[80];
+      char *pos = line;
+      uint8_t c;
+      while ((c = input_getc()) != '\r') {
+        if (c == '\b' || c == 0x7f) {
+          if (pos > line) {
+            pos--;
+            printf("\b \b");
+          }
+        } else if (pos < line + sizeof(line) - 1) {
+          *pos++ = c;
+          printf("%c", c);
+        }
+      }
+      *pos = '\0';
+      printf("\n");
+      
+      if (strcmp(line, "exit") == 0) {
+        break;
+      } else if (strcmp(line, "whoami") == 0) {
+        printf("SULLY123\n");  
+      } else {
+        printf("invalid command\n");
+      }
+    }
   }
 
   /* Finish up. */
