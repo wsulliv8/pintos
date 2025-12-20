@@ -1,0 +1,30 @@
+{
+  "C_Cpp.default.systemIncludePath": [],
+  "C_Cpp.default.intelliSenseMode": "gcc-x86",
+  "C_Cpp.errorSquiggles": "disabled",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/src",
+    "${workspaceFolder}/src/threads",
+    "${workspaceFolder}/src/devices",
+    "${workspaceFolder}/src/lib",
+    "${workspaceFolder}/src/lib/kernel",
+    "${workspaceFolder}/src/lib/user"
+  ],
+  "C_Cpp.default.browse.path": [
+    "${workspaceFolder}/src",
+    "${workspaceFolder}/src/threads",
+    "${workspaceFolder}/src/devices",
+    "${workspaceFolder}/src/lib",
+    "${workspaceFolder}/src/lib/kernel",
+    "${workspaceFolder}/src/lib/user"
+  ],
+  "C_Cpp.default.defines": ["__KERNEL__", "__STDC_VERSION__=199901L"],
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "C_Cpp.default.cStandard": "c99",
+  "C_Cpp.default.compilerArgs": [
+    "-m32",
+    "-nostdinc",
+    "-nostdlib",
+    "-ffreestanding"
+  ]
+}

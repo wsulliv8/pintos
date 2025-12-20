@@ -1,0 +1,13 @@
+-I/home/will/code/pintos/src
+-I/home/will/code/pintos/src/threads
+-I/home/will/code/pintos/src/devices
+-I/home/will/code/pintos/src/lib
+-I/home/will/code/pintos/src/lib/kernel
+-I/home/will/code/pintos/src/lib/user
+-m32
+-nostdinc
+-nostdlib
+-ffreestanding
+-D__KERNEL__
+-D__STDC_VERSION__=199901L
+-std=gnu99

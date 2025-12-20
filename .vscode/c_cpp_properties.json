@@ -1,0 +1,26 @@
+{
+  "configurations": [
+    {
+      "name": "Pintos",
+      "includePath": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/threads",
+        "${workspaceFolder}/src/devices",
+        "${workspaceFolder}/src/lib",
+        "${workspaceFolder}/src/lib/kernel",
+        "${workspaceFolder}/src/lib/user"
+      ],
+      "defines": ["__KERNEL__", "__STDC_VERSION__=199901L"],
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c99",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-x86",
+      "compilerArgs": ["-m32", "-nostdinc", "-nostdlib", "-ffreestanding"],
+      "browse": {
+        "path": ["${workspaceFolder}/src"],
+        "limitSymbolsToIncludedHeaders": false
+      }
+    }
+  ],
+  "version": 4
+}
