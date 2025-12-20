@@ -1,7 +1,7 @@
 {
   "C_Cpp.default.systemIncludePath": [],
   "C_Cpp.default.intelliSenseMode": "gcc-x86",
-  "C_Cpp.errorSquiggles": "disabled",
+  "C_Cpp.errorSquiggles": "enabled",
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/src",
     "${workspaceFolder}/src/threads",
