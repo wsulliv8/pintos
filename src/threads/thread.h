@@ -93,9 +93,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /**< List element. */
 
-    /* Project 1 */
-    int64_t wakeup_time;              /**< Wakeup time for alarm clock. */
-    /* Project 1 End */
+    int64_t wakeup_time;              /**< [Project 1 Task 1] Wakeup time for alarm clock. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -137,6 +135,7 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 void thread_preempt_if_needed (void); // [Project 1 Task 2.1]
+bool thread_list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux); // [Project 1 Task 2.1]
 
 int thread_get_nice (void);
 void thread_set_nice (int);

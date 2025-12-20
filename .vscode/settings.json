@@ -26,5 +26,16 @@
     "-nostdinc",
     "-nostdlib",
     "-ffreestanding"
-  ]
+  ],
+  "C_Cpp.clang_format_style": "file",
+  "editor.formatOnSave": true,
+  "editor.rulers": [80],
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.formatOnSave": true
+  },
+  "editor.formatOnType": false,
+  "files.associations": {
+    "*.c": "c"
+  }
 }

@@ -1,0 +1,18 @@
+---
+Language: C
+BasedOnStyle: GNU
+ColumnLimit: 80
+IndentWidth: 2
+ContinuationIndentWidth: 2
+UseTab: Never
+PointerAlignment: Right
+BreakBeforeBraces: Linux
+SortIncludes: false
+BinPackArguments: false
+BinPackParameters: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+ReflowComments: true
+SpacesBeforeTrailingComments: 1
+---
+
