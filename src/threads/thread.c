@@ -55,6 +55,10 @@ static long long user_ticks;    /**< # of timer ticks in user programs. */
 #define TIME_SLICE 4            /**< # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /**< # of timer ticks since last yield. */
 
+// ** [Project 1 Task 2] Priority */
+static bool thread_list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void thread_preempt_if_needed (void);
+
 /** If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -202,6 +206,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  thread_preempt_if_needed(); // [Project 1 Task 2.1] Immediately yield if the new thread has higher priority.
+
   return tid;
 }
 
@@ -238,7 +244,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+
+  /* [Project 1 Task 2.1] Basic priority-based scheduling. */
+  list_insert_ordered (&ready_list, &t->elem, thread_list_less_func, NULL); 
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -309,7 +318,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, thread_list_less_func, NULL); // [Project 1 Task 2.1]
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -337,6 +346,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_preempt_if_needed();
 }
 
 /** Returns the current thread's priority. */
@@ -583,3 +593,36 @@ allocate_tid (void)
 /** Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+/** [Project 1 Task 2.1] Priority comparison function. */
+bool
+thread_list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) 
+{
+  ASSERT(a != NULL && b != NULL);
+
+  /* Higher priority numbers = higher priority. Return true if a should come before b.
+     For higher priority first, a comes before b when a->priority > b->priority. */
+  return list_entry (a, struct thread, elem)->priority > list_entry (b, struct thread, elem)->priority;
+}
+
+/** [Project 1 Task 2.1] Yield if the current thread is not the highest priority thread. */
+void
+thread_preempt_if_needed (void)
+{
+  enum intr_level old_level = intr_disable ();
+  
+  if (!list_empty (&ready_list)) {
+    /* Yield if a ready thread has higher priority than current thread. */
+    if (list_entry (list_front (&ready_list), struct thread, elem)->priority > thread_current ()->priority) {
+      if (intr_context()) {
+        /* If in interrupt context, yield on return. */
+        intr_yield_on_return ();
+      } else {
+        intr_set_level (old_level);
+        thread_yield ();
+      }
+    }
+  }
+  intr_set_level (old_level);
+}

@@ -136,6 +136,7 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void thread_preempt_if_needed (void); // [Project 1 Task 2.1]
 
 int thread_get_nice (void);
 void thread_set_nice (int);

@@ -190,9 +190,8 @@ timer_print_stats (void)
 static bool
 sleep_list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) 
 {
-  const struct thread *ta = list_entry (a, struct thread, elem);
-  const struct thread *tb = list_entry (b, struct thread, elem);
-  return ta->wakeup_time < tb->wakeup_time;
+  ASSERT(a != NULL && b != NULL);
+  return list_entry (a, struct thread, elem)->wakeup_time < list_entry (b, struct thread, elem)->wakeup_time;
 }
 
 /** Timer interrupt handler. */
