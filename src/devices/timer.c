@@ -90,20 +90,24 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/** Sleeps for approximately TICKS timer ticks.  Interrupts must
+/** Sleeps for approximately DURATION_TICKS (renamed in Project 1) timer ticks.  Interrupts must
    be turned on. */
 void
-timer_sleep (int64_t ticks) 
+timer_sleep (int64_t duration_ticks) 
 {
-  int64_t start = timer_ticks ();
-
   /* [Project 1] Add the current thread to the sleep list. */
+  if (duration_ticks <= 0) {
+    return;
+  }
+  
   enum intr_level old_level = intr_disable ();
+
   struct thread *current = thread_current ();
-  current->wakeup_time = start + ticks;
+  current->wakeup_time = duration_ticks + ticks; // Use static ticks since intr already disabled
 
   /* Insert sorted by wakeup_time to minimize iteration time in interrupt handler. */
   list_insert_ordered (&sleep_list, &current->elem, sleep_list_less_func, NULL);
+
   thread_block();
   intr_set_level (old_level);
   /* [Project 1] End */
@@ -199,13 +203,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_tick ();
 
   /* [Project 1] Check if any threads need to be woken up. */
-  struct list_elem *e, *next;
-  for (e = list_begin (&sleep_list); e != list_end (&sleep_list); e = next) {
-    next = list_next (e); // Get next element before removing current element
-    struct thread *t = list_entry (e, struct thread, elem);
+  while (!list_empty (&sleep_list)) {
+    struct thread *t = list_entry (list_begin (&sleep_list), struct thread, elem);
     if (ticks >= t->wakeup_time) {
+      list_pop_front (&sleep_list);
       thread_unblock (t);
-      list_remove (e);
+    } else {
+      break; // List is sorted, so entries past this point are not ready to wake up.
     }
   }
   /* [Project 1] End */
