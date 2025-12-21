@@ -350,8 +350,77 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
-  thread_preempt_if_needed (); // [Project 1 Task 2.1]
+  thread_current ()->base_priority = new_priority;
+  thread_update_priority (thread_current ());
+  thread_preempt_if_needed ();
+}
+
+/** [Project 1 Task 2.2] Comparison function for donation list. */
+static bool
+donation_list_less_func (const struct list_elem *a,
+                         const struct list_elem *b,
+                         void *aux UNUSED)
+{
+  ASSERT (a != NULL && b != NULL);
+
+  /* For donation_list, use donation_elem to get the thread. */
+  return list_entry (a, struct thread, donation_elem)->priority
+         < list_entry (b, struct thread, donation_elem)->priority;
+}
+
+/** [Project 1 Task 2.2] Set priority to highest*/
+void
+thread_update_priority (struct thread *t)
+{
+  t->priority = t->base_priority;
+  if (!list_empty (&t->donation_list)) {
+    int donated_priority_max
+      = list_entry (list_max (&t->donation_list, donation_list_less_func, NULL),
+                    struct thread,
+                    donation_elem)
+          ->priority;
+    if (donated_priority_max > t->base_priority) {
+      t->priority = donated_priority_max;
+    }
+  }
+}
+
+/** [Project 1 Task 2.2] Nested priority donation. */
+void
+thread_donate_priority (struct thread *t_donor)
+{
+  int depth = 0;
+  struct lock *l = t_donor->waiting_on_lock;
+  struct thread *t_donee = l->holder;
+
+  if (t_donee == NULL) {
+    return;
+  }
+
+  enum intr_level old_level = intr_disable ();
+
+  list_push_back (&t_donee->donation_list, &t_donor->donation_elem);
+
+  /* Nested donation loop. */
+  while (depth < PRI_DONATION_MAX_DEPTH) {
+    thread_update_priority (t_donee); /* Max priority may have changed. */
+
+    /* Position in ready list may have changed. */
+    if (t_donee->status == THREAD_READY) {
+      list_remove (&t_donee->elem);
+      list_insert_ordered (
+        &ready_list, &t_donee->elem, thread_list_less_func, NULL);
+    }
+
+    /* Move to next donee. */
+    l = t_donee->waiting_on_lock;
+    if (l == NULL)
+      break;
+    t_donee = l->holder;
+    depth++;
+  }
+
+  intr_set_level (old_level);
 }
 
 /** Returns the current thread's priority. */
@@ -477,6 +546,9 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *)t + PGSIZE;
   t->priority = priority;
+  t->base_priority = priority;   /* [Project 1 Task 2.2] */
+  t->waiting_on_lock = NULL;     /* [Project 1 Task 2.2] */
+  list_init (&t->donation_list); /* [Project 1 Task 2.2] */
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();

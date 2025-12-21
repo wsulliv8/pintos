@@ -6,23 +6,25 @@
 #include <stdint.h>
 
 /** States in a thread's life cycle. */
-enum thread_status
-  {
-    THREAD_RUNNING,     /**< Running thread. */
-    THREAD_READY,       /**< Not running but ready to run. */
-    THREAD_BLOCKED,     /**< Waiting for an event to trigger. */
-    THREAD_DYING        /**< About to be destroyed. */
-  };
+enum thread_status {
+  THREAD_RUNNING, /**< Running thread. */
+  THREAD_READY,   /**< Not running but ready to run. */
+  THREAD_BLOCKED, /**< Waiting for an event to trigger. */
+  THREAD_DYING    /**< About to be destroyed. */
+};
 
 /** Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
-#define TID_ERROR ((tid_t) -1)          /**< Error value for tid_t. */
+#define TID_ERROR ((tid_t) - 1) /**< Error value for tid_t. */
 
 /** Thread priorities. */
-#define PRI_MIN 0                       /**< Lowest priority. */
-#define PRI_DEFAULT 31                  /**< Default priority. */
-#define PRI_MAX 63                      /**< Highest priority. */
+#define PRI_MIN 0      /**< Lowest priority. */
+#define PRI_DEFAULT 31 /**< Default priority. */
+#define PRI_MAX 63     /**< Highest priority. */
+
+/** [Project 1 Task 2.2] Max nested donation depth. */
+#define PRI_DONATION_MAX_DEPTH 8
 
 /** A kernel thread or user process.
 
@@ -80,29 +82,37 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
-struct thread
-  {
-    /* Owned by thread.c. */
-    tid_t tid;                          /**< Thread identifier. */
-    enum thread_status status;          /**< Thread state. */
-    char name[16];                      /**< Name (for debugging purposes). */
-    uint8_t *stack;                     /**< Saved stack pointer. */
-    int priority;                       /**< Priority. */ 
-    struct list_elem allelem;           /**< List element for all threads list. */
+struct thread {
+  /* Owned by thread.c. */
+  tid_t tid;                 /**< Thread identifier. */
+  enum thread_status status; /**< Thread state. */
+  char name[16];             /**< Name (for debugging purposes). */
+  uint8_t *stack;            /**< Saved stack pointer. */
+  int64_t wakeup_time; /**< [Project 1 Task 1] Wakeup time for alarm clock. */
+  struct lock *waiting_on_lock; /**< [Project 1 Task 2.2] Lock that this thread
+                                  is waiting on. */
 
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /**< List element. */
+  int base_priority;         /**< [Project 1 Task 2.2] Base priority. */
+  int priority;              /**< Highest current priority*/
+  struct list donation_list; /**< [Project 1 Task 2.2] List of threads that have
+                                donated their priority to this thread. */
 
-    int64_t wakeup_time;              /**< [Project 1 Task 1] Wakeup time for alarm clock. */
+  struct list_elem allelem; /**< List element for all threads list. */
+  struct list_elem
+    elem; /**< List element. Shared between ready_list and donation_list. */
+  struct list_elem
+    donation_elem; /**< [Project 1 Task 2.2] List element for donation
+                      list.Needs to be separate from elem since a thread can be
+                      in ready_list and donation_list at the same time. */
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /**< Page directory. */
+  /* Owned by userprog/process.c. */
+  uint32_t *pagedir; /**< Page directory. */
 #endif
 
-    /* Owned by thread.c. */
-    unsigned magic;                     /**< Detects stack overflow. */
-  };
+  /* Owned by thread.c. */
+  unsigned magic; /**< Detects stack overflow. */
+};
 
 /** If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -134,8 +144,13 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_preempt_if_needed (void); // [Project 1 Task 2.1]
-bool thread_list_less_func (const struct list_elem *a, const struct list_elem *b, void *aux); // [Project 1 Task 2.1]
+void thread_update_priority (struct thread *); /**< [Project 1 Task 2.2] */
+void thread_donate_priority (struct thread *); /**< [Project 1 Task 2.2] */
+void thread_preempt_if_needed (void);          /**< [Project 1 Task 2.1] */
+bool
+thread_list_less_func (const struct list_elem *a, /**< [Project 1 Task 2.1] */
+                       const struct list_elem *b,
+                       void *aux); /**< [Project 1 Task 2.1] */
 
 int thread_get_nice (void);
 void thread_set_nice (int);

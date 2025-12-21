@@ -175,19 +175,19 @@ sema_test_helper (void *sema_)
 }
 
 /** Initializes LOCK.  A lock can be held by at most a single
-                        thread at any given time.  Our locks are not
-   "recursive", that is, it is an error for the thread currently holding a lock
-   to try to acquire that lock.
+                                           thread at any given time.  Our locks
+     are not "recursive", that is, it is an error for the thread currently
+    holding a lock to try to acquire that lock.
 
-                        A lock is a specialization of a semaphore with an
-   initial value of 1.  The difference between a lock and such a semaphore is
-   twofold.  First, a semaphore can have a value greater than 1, but a lock can
-   only be owned by a single thread at a time.  Second, a semaphore does not
-   have an owner, meaning that one thread can "down" the semaphore and then
-   another one "up" it, but with a lock the same thread must both acquire and
-   release it. When these restrictions prove onerous, it's a good sign that a
-   semaphore should be used, instead of a lock.
-  */
+                                           A lock is a specialization of a
+      semaphore with an initial value of 1.  The difference between a lock and
+     such a semaphore is twofold.  First, a semaphore can have a value greater
+     than 1, but a lock can only be owned by a single thread at a time.  Second,
+    a semaphore does not have an owner, meaning that one thread can "down" the
+    semaphore and then another one "up" it, but with a lock the same thread must
+    both acquire and release it. When these restrictions prove onerous, it's a
+    good sign that a semaphore should be used, instead of a lock.
+                     */
 void
 lock_init (struct lock *lock)
 {
@@ -212,8 +212,18 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  /* [Project 1 Task 2.2] Nested priority donation.*/
+  struct thread *t = thread_current ();
+
+  if (lock->holder != NULL) {
+    t->waiting_on_lock = lock;
+    thread_donate_priority (t); /* Nested donation call. */
+  }
+  /* [Project 1 Task 2.2] End */
+
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  t->waiting_on_lock = NULL;
+  lock->holder = t;
 }
 
 /** Tries to acquires LOCK and returns true if successful or false
@@ -247,8 +257,23 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  /* [Project 1 Task 2.2] Remove from donation list. */
+  struct thread *t = thread_current ();
+  struct list_elem *e = list_begin (&t->donation_list);
+  while (e != list_end (&t->donation_list)) {
+    struct thread *t_donor = list_entry (e, struct thread, donation_elem);
+    if (t_donor->waiting_on_lock == lock) {
+      e = list_remove (e);
+    } else {
+      e = list_next (e);
+    }
+  }
+  thread_update_priority (t);
+  /* [Project 1 Task 2.2] End */
+
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  thread_preempt_if_needed (); /* [Project 1 Task 2.2] */
 }
 
 /** Returns true if the current thread holds LOCK, false
