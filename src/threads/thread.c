@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -64,6 +65,7 @@ void thread_preempt_if_needed (void);
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+static fp_t load_avg; /**< [Project 1 Task 2.3] System load average. */
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -104,6 +106,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  load_avg = 0; /* [Project 1 Task 2.3] */
 }
 
 /** Starts preemptive thread scheduling by enabling interrupts.
@@ -423,42 +426,45 @@ thread_donate_priority (struct thread *t_donor)
   intr_set_level (old_level);
 }
 
-/** Returns the current thread's priority. */
+/** [Project 1 Task 2.3] Returns the current thread's priority. */
 int
 thread_get_priority (void)
 {
   return thread_current ()->priority;
 }
 
-/** Sets the current thread's nice value to NICE. */
+/** [Project 1 Task 2.3] Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED)
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  thread_current ()->nice = nice;
+
+  if (thread_mlfqs) {
+    thread_update_priority (thread_current ());
+    thread_preempt_if_needed ();
+  }
 }
 
-/** Returns the current thread's nice value. */
+/** [Project 1 Task 2.3] Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
 }
 
-/** Returns 100 times the system load average. */
+/** [Project 1 Task 2.3] Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return FP_TO_INT_NEAR (MUL_FP_INT (load_avg, 100));
 }
 
-/** Returns 100 times the current thread's recent_cpu value. */
+/** [Project 1 Task 2.3] Returns 100 times the current thread's recent_cpu
+ * value. */
 int
 thread_get_recent_cpu (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return FP_TO_INT_NEAR (MUL_FP_INT (thread_current ()->recent_cpu, 100));
 }
 
 /** Idle thread.  Executes when no other thread is ready to run.
@@ -537,6 +543,11 @@ init_thread (struct thread *t, const char *name, int priority)
 {
   enum intr_level old_level;
 
+  /* [Project 1 Task 2.3] Use running_thread instead of
+                            thread_current since unable to pass ASSERTs in
+                            thread_current for initial thread. */
+  struct thread *current = running_thread ();
+
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
@@ -550,6 +561,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->waiting_on_lock = NULL;     /* [Project 1 Task 2.2] */
   list_init (&t->donation_list); /* [Project 1 Task 2.2] */
   t->magic = THREAD_MAGIC;
+  t->recent_cpu = 0; /* [Project 1 Task 2.3] */
+  /* [Project 1 Task 2.3] Inherit from parent thread if it exists and is not the
+   * same thread (inital_thread case). */
+  t->nice = (is_thread (current) && current != t) ? current->nice : 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/fixed-point.h"
 
 /** States in a thread's life cycle. */
 enum thread_status {
@@ -25,6 +26,10 @@ typedef int tid_t;
 
 /** [Project 1 Task 2.2] Max nested donation depth. */
 #define PRI_DONATION_MAX_DEPTH 8
+
+/** [Project 1 Task 2.3] Nice value ranges. */
+#define NICE_MIN -20
+#define NICE_MAX 20
 
 /** A kernel thread or user process.
 
@@ -96,6 +101,9 @@ struct thread {
   int priority;              /**< Highest current priority*/
   struct list donation_list; /**< [Project 1 Task 2.2] List of threads that have
                                 donated their priority to this thread. */
+
+  int nice;        /**< [Project 1 Task 2.3] Nice value. */
+  fp_t recent_cpu; /**< [Project 1 Task 2.3] Recent CPU usage. */
 
   struct list_elem allelem; /**< List element for all threads list. */
   struct list_elem
