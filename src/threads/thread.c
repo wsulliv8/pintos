@@ -354,9 +354,11 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->base_priority = new_priority;
-  thread_update_priority (thread_current (), NULL);
-  thread_preempt_if_needed ();
+  if (!thread_mlfqs) {
+    thread_current ()->base_priority = new_priority;
+    thread_update_priority (thread_current (), NULL);
+    thread_preempt_if_needed ();
+  }
 }
 
 /** [Project 1 Task 2.2] Comparison function for donation list. */
@@ -463,8 +465,8 @@ thread_update_load_avg (void)
     ready_threads++;
   }
   load_avg
-    = ADD_FP (MUL_FP (load_avg, DIV_FP (INT_TO_FP (59), INT_TO_FP (60))),
-              MUL_FP (ready_threads, DIV_FP (INT_TO_FP (1), INT_TO_FP (60))));
+    = ADD_FP (MUL_FP (load_avg, DIV_FP_INT (INT_TO_FP (59), 60)),
+              MUL_FP_INT (DIV_FP_INT (INT_TO_FP (1), 60), ready_threads));
 }
 
 /** [Project 1 Task 2.3] Returns the current thread's priority. */
@@ -478,11 +480,14 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
-  thread_current ()->nice = nice;
-
   if (thread_mlfqs) {
+    enum intr_level old_level = intr_disable ();
+    thread_current ()->nice = nice;
     thread_update_priority (thread_current (), NULL);
+    intr_set_level (old_level);
     thread_preempt_if_needed ();
+  } else {
+    thread_current ()->nice = nice;
   }
 }
 
@@ -497,7 +502,10 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  return FP_TO_INT_NEAR (MUL_FP_INT (load_avg, 100));
+  enum intr_level old_level = intr_disable ();
+  int avg = FP_TO_INT_NEAR (MUL_FP_INT (load_avg, 100));
+  intr_set_level (old_level);
+  return avg;
 }
 
 /** [Project 1 Task 2.3] Returns 100 times the current thread's recent_cpu
@@ -505,7 +513,10 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void)
 {
-  return FP_TO_INT_NEAR (MUL_FP_INT (thread_current ()->recent_cpu, 100));
+  enum intr_level old_level = intr_disable ();
+  int cpu = FP_TO_INT_NEAR (MUL_FP_INT (thread_current ()->recent_cpu, 100));
+  intr_set_level (old_level);
+  return cpu;
 }
 
 /** Idle thread.  Executes when no other thread is ready to run.
