@@ -194,6 +194,26 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+  /* [Project 1 Task 2.3] Update recent_cpu and load_avg if using MLFQS. */
+  if (thread_mlfqs) {
+    struct thread *t = thread_current ();
+
+    /* Increment recent_cpu for current thread every tick. */
+    if (t != idle_thread) {
+      t->recent_cpu = ADD_FP_INT (t->recent_cpu, 1);
+    }
+    /* Update recent_cpu and load_avg for all threads every second */
+    if (ticks % TIMER_FREQ == 0) {
+      thread_update_load_avg ();
+      thread_foreach (thread_update_recent_cpu, NULL);
+    }
+    /* Update priority for all threads every 4 ticks*/
+    if (ticks % 4 == 0) {
+      thread_foreach (thread_update_priority, NULL);
+    }
+  }
+  /* [Project 1 Task 2.3] End */
+
   /* [Project 1] Check if any threads need to be woken up. */
   bool woke_up = false;
   while (!list_empty (&sleep_list)) {
@@ -204,8 +224,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
       thread_unblock (t);
       woke_up = true;
     } else {
-      break; // List is sorted, so entries past this point are not ready to wake
-             // up.
+      break; // List is sorted, so entries past this point are not ready to
+             // wake up.
     }
   }
   if (woke_up) {

@@ -31,7 +31,8 @@ static struct list ready_list;
 static struct list all_list;
 
 /** Idle thread. */
-static struct thread *idle_thread;
+/* [Project 1 Task 2.3] Change to global for use in timer.c */
+struct thread *idle_thread;
 
 /** Initial thread, the thread running init.c:main(). */
 static struct thread *initial_thread;
@@ -354,7 +355,7 @@ void
 thread_set_priority (int new_priority)
 {
   thread_current ()->base_priority = new_priority;
-  thread_update_priority (thread_current ());
+  thread_update_priority (thread_current (), NULL);
   thread_preempt_if_needed ();
 }
 
@@ -369,23 +370,6 @@ donation_list_less_func (const struct list_elem *a,
   /* For donation_list, use donation_elem to get the thread. */
   return list_entry (a, struct thread, donation_elem)->priority
          < list_entry (b, struct thread, donation_elem)->priority;
-}
-
-/** [Project 1 Task 2.2] Set priority to highest*/
-void
-thread_update_priority (struct thread *t)
-{
-  t->priority = t->base_priority;
-  if (!list_empty (&t->donation_list)) {
-    int donated_priority_max
-      = list_entry (list_max (&t->donation_list, donation_list_less_func, NULL),
-                    struct thread,
-                    donation_elem)
-          ->priority;
-    if (donated_priority_max > t->base_priority) {
-      t->priority = donated_priority_max;
-    }
-  }
 }
 
 /** [Project 1 Task 2.2] Nested priority donation. */
@@ -406,7 +390,7 @@ thread_donate_priority (struct thread *t_donor)
 
   /* Nested donation loop. */
   while (depth < PRI_DONATION_MAX_DEPTH) {
-    thread_update_priority (t_donee); /* Max priority may have changed. */
+    thread_update_priority (t_donee, NULL); /* Max priority may have changed. */
 
     /* Position in ready list may have changed. */
     if (t_donee->status == THREAD_READY) {
@@ -426,6 +410,63 @@ thread_donate_priority (struct thread *t_donor)
   intr_set_level (old_level);
 }
 
+/** [Project 1 Task 2.2] Set priority to highest
+[Project 1 Task 2.3] Update recent_cpu if using MLFQS.
+*/
+void
+thread_update_priority (struct thread *t, void *aux UNUSED)
+{
+  enum intr_level old_level = intr_disable ();
+
+  if (thread_mlfqs) {
+    int priority = FP_TO_INT_TRUNC (SUB_INT_FP (
+      PRI_MAX, ADD_FP_INT (DIV_FP_INT (t->recent_cpu, 4), 2 * t->nice)));
+    priority = priority < PRI_MIN ? PRI_MIN : priority;
+    priority = priority > PRI_MAX ? PRI_MAX : priority;
+    t->priority = priority;
+  } else {
+    t->priority = t->base_priority;
+    if (!list_empty (&t->donation_list)) {
+      int donated_priority_max
+        = list_entry (
+            list_max (&t->donation_list, donation_list_less_func, NULL),
+            struct thread,
+            donation_elem)
+            ->priority;
+      if (donated_priority_max > t->base_priority) {
+        t->priority = donated_priority_max;
+      }
+    }
+  }
+
+  intr_set_level (old_level);
+}
+
+/** [Project 1 Task 2.3] Update recent_cpu if using MLFQS. */
+void
+thread_update_recent_cpu (struct thread *t, void *aux UNUSED)
+{
+  if (t == idle_thread) {
+    return;
+  }
+  fp_t coeff = DIV_FP (MUL_FP_INT (2, load_avg),
+                       ADD_FP_INT (MUL_FP_INT (2, load_avg), 1));
+  t->recent_cpu = ADD_FP_INT (MUL_FP (t->recent_cpu, coeff), t->nice);
+}
+
+/** [Project 1 Task 2.3] Update load_avg if using MLFQS. */
+void
+thread_update_load_avg (void)
+{
+  int ready_threads = list_size (&ready_list);
+  if (thread_current () != idle_thread) {
+    ready_threads++;
+  }
+  load_avg
+    = ADD_FP (MUL_FP (load_avg, DIV_FP (INT_TO_FP (59), INT_TO_FP (60))),
+              MUL_FP (ready_threads, DIV_FP (INT_TO_FP (1), INT_TO_FP (60))));
+}
+
 /** [Project 1 Task 2.3] Returns the current thread's priority. */
 int
 thread_get_priority (void)
@@ -440,7 +481,7 @@ thread_set_nice (int nice)
   thread_current ()->nice = nice;
 
   if (thread_mlfqs) {
-    thread_update_priority (thread_current ());
+    thread_update_priority (thread_current (), NULL);
     thread_preempt_if_needed ();
   }
 }
@@ -562,8 +603,8 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init (&t->donation_list); /* [Project 1 Task 2.2] */
   t->magic = THREAD_MAGIC;
   t->recent_cpu = 0; /* [Project 1 Task 2.3] */
-  /* [Project 1 Task 2.3] Inherit from parent thread if it exists and is not the
-   * same thread (inital_thread case). */
+  /* [Project 1 Task 2.3] Inherit from parent thread if it exists and is not
+   * the same thread (inital_thread case). */
   t->nice = (is_thread (current) && current != t) ? current->nice : 0;
 
   old_level = intr_disable ();
@@ -699,8 +740,8 @@ thread_list_less_func (const struct list_elem *a,
          > list_entry (b, struct thread, elem)->priority;
 }
 
-/** [Project 1 Task 2.1] Yield if the current thread is not the highest priority
- * thread. */
+/** [Project 1 Task 2.1] Yield if the current thread is not the highest
+ * priority thread. */
 void
 thread_preempt_if_needed (void)
 {

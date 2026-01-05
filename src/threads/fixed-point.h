@@ -17,6 +17,7 @@ typedef int32_t fp_t;
 #define ADD_FP_INT(x, n) ((x) + (n) * F)
 #define SUB_FP(x, y) ((x) - (y))
 #define SUB_FP_INT(x, n) ((x) - (n) * F)
+#define SUB_INT_FP(n, x) ((n) * F - (x))
 
 /** Multiplication and division. */
 #define MUL_FP(x, y) ((((int64_t)(x)) * (y)) / F)
