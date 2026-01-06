@@ -175,19 +175,19 @@ sema_test_helper (void *sema_)
 }
 
 /** Initializes LOCK.  A lock can be held by at most a single
-                                           thread at any given time.  Our locks
-     are not "recursive", that is, it is an error for the thread currently
-    holding a lock to try to acquire that lock.
+                                            thread at any given time.  Our locks
+      are not "recursive", that is, it is an error for the thread currently
+     holding a lock to try to acquire that lock.
 
-                                           A lock is a specialization of a
-      semaphore with an initial value of 1.  The difference between a lock and
-     such a semaphore is twofold.  First, a semaphore can have a value greater
-     than 1, but a lock can only be owned by a single thread at a time.  Second,
-    a semaphore does not have an owner, meaning that one thread can "down" the
-    semaphore and then another one "up" it, but with a lock the same thread must
-    both acquire and release it. When these restrictions prove onerous, it's a
-    good sign that a semaphore should be used, instead of a lock.
-                     */
+                                            A lock is a specialization of a
+       semaphore with an initial value of 1.  The difference between a lock and
+      such a semaphore is twofold.  First, a semaphore can have a value greater
+      than 1, but a lock can only be owned by a single thread at a time. Second,
+     a semaphore does not have an owner, meaning that one thread can "down" the
+     semaphore and then another one "up" it, but with a lock the same thread
+   must both acquire and release it. When these restrictions prove onerous, it's
+   a good sign that a semaphore should be used, instead of a lock.
+                      */
 void
 lock_init (struct lock *lock)
 {
@@ -268,7 +268,7 @@ lock_release (struct lock *lock)
       e = list_next (e);
     }
   }
-  thread_update_priority (t);
+  thread_update_priority (t, NULL);
   /* [Project 1 Task 2.2] End */
 
   lock->holder = NULL;

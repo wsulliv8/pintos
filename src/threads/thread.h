@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/fixed-point.h"
 
 /** States in a thread's life cycle. */
 enum thread_status {
@@ -25,6 +26,10 @@ typedef int tid_t;
 
 /** [Project 1 Task 2.2] Max nested donation depth. */
 #define PRI_DONATION_MAX_DEPTH 8
+
+/** [Project 1 Task 2.3] Nice value ranges. */
+#define NICE_MIN -20
+#define NICE_MAX 20
 
 /** A kernel thread or user process.
 
@@ -97,6 +102,9 @@ struct thread {
   struct list donation_list; /**< [Project 1 Task 2.2] List of threads that have
                                 donated their priority to this thread. */
 
+  int nice;        /**< [Project 1 Task 2.3] Nice value. */
+  fp_t recent_cpu; /**< [Project 1 Task 2.3] Recent CPU usage. */
+
   struct list_elem allelem; /**< List element for all threads list. */
   struct list_elem
     elem; /**< List element. Shared between ready_list and donation_list. */
@@ -118,6 +126,9 @@ struct thread {
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+/* [Project 1 Task 2.3] Change to global for use in timer.c */
+extern struct thread *idle_thread;
 
 void thread_init (void);
 void thread_start (void);
@@ -144,7 +155,8 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_update_priority (struct thread *); /**< [Project 1 Task 2.2] */
+void thread_update_priority (struct thread *,
+                             void *aux); /**< [Project 1 Task 2.2 and 2.3] */
 void thread_donate_priority (struct thread *); /**< [Project 1 Task 2.2] */
 void thread_preempt_if_needed (void);          /**< [Project 1 Task 2.1] */
 bool
@@ -152,6 +164,9 @@ thread_list_less_func (const struct list_elem *a, /**< [Project 1 Task 2.1] */
                        const struct list_elem *b,
                        void *aux); /**< [Project 1 Task 2.1] */
 
+void thread_update_recent_cpu (struct thread *,
+                               void *aux); /**< [Project 1 Task 2.3] */
+void thread_update_load_avg (void);        /**< [Project 1 Task 2.3] */
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
